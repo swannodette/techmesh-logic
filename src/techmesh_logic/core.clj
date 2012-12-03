@@ -108,7 +108,7 @@
     (conso x '(b c) q)))
 
 ;; -----------------------------------------------------------------------------
-;; A little sugar
+;; A little sugar a la PROLOG
 
 (defne sugar [l o]
   ([[h . t] [:head h :tail t]]))
@@ -380,6 +380,27 @@
 ;; -----------------------------------------------------------------------------
 ;; Extensible Constraints
 
+(defc numberc [x]
+  (number? x))
+
+(run* [q]
+  (numberc q))
+
+(run* [q]
+  (fresh [x]
+    (numberc x)
+    (== q [x :foo])
+    (== q [1 :foo])))
+
+(run* [q]
+  (fresh [x]
+    (numberc x)
+    (== q [x :foo])
+    (== q ["foo" :foo])))
+
+;; -----------------------------------------------------------------------------
+;; Under the hood
+
 (defn -not-pathc
   ([x path] (-not-pathc x path nil))
   ([x path id]
@@ -429,9 +450,3 @@
 (run* [q]
   (not-pathc q [:a :b])
   (== q {:a {:b 1}}))
-
-(defc not-pathc [x path]
-  (= (get-in x path ::not-found) ::not-found))
-
-(run* [q]
-  (not-pathc q [:a :b]))
