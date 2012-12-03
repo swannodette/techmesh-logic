@@ -10,14 +10,14 @@
   (== q true))
 
 (run* [q]
+  (== true q))
+
+(run* [q]
   (== q false))
 
 (run* [q]
   (== q true)
   (== q false))
-
-(run* [q]
-  (== true q))
 
 (run* [q]
   (fresh [x]
@@ -30,7 +30,8 @@
 
 (run* [q]
   (let [local (+ 1 2)]
-    (== q local)))
+    (fresh []
+      (== q local))))
 
 ;; -----------------------------------------------------------------------------
 ;; Under the hood
@@ -139,7 +140,7 @@
 
 (defn zebrao [hs]
   (m/symbol-macrolet [_ (lvar)]
-    (all
+    (fresh []
      (== [_ _ [_ _ 'milk _ _] _ _] hs)
      (firsto hs ['norwegian _ _ _ _])
      (nexto ['norwegian _ _ _ _] [_ _ _ _ 'blue] hs)
@@ -379,7 +380,6 @@
        clojure.lang.IFn
        (invoke [this a]
          (let [x (walk a x)]
-           (println x)
            (if (not (map? x))
              ((remcg this) a)
              (when (= (get-in x path ::not-found) ::not-found)
@@ -425,3 +425,6 @@
 
 (defc not-pathc [x path]
   (= (get-in x path ::not-found) ::not-found))
+
+(run* [q]
+  (not-pathc q [:a :b]))
