@@ -1,6 +1,7 @@
 (ns techmesh-logic.core
   (:refer-clojure :exclude [==])
-  (:require [clojure.tools.macro :as m])
+  (:require [clojure.tools.macro :as m]
+            [clojure.pprint :as pp])
   (:use [clojure.core.logic :as l]))
 
 ;; -----------------------------------------------------------------------------
@@ -32,6 +33,11 @@
   (let [local (+ 1 2)]
     (fresh []
       (== q local))))
+
+(run* [q]
+  (fresh [x y]
+    (== [x 2] [1 y])
+    (== q [x y])))
 
 ;; -----------------------------------------------------------------------------
 ;; Under the hood
@@ -156,8 +162,9 @@
      (nexto [_ _ _ 'horse _] [_ 'kools _ _ _] hs)
      (nexto [_ _ _ 'fox _] [_ 'chesterfields _ _ _] hs))))
 
-(run 1 [q]
-  (zebrao q))
+(pp/pprint
+ (run 1 [q]
+   (zebrao q)))
 
 (dotimes [_ 5]
   (time
