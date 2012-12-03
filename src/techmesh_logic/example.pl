@@ -1,0 +1,1 @@
+sugar([H|T],[head-H,tail-T]).

@@ -7,32 +7,48 @@
 ;; -----------------------------------------------------------------------------
 ;; Basics
 
+; Q=true.
+
 (run* [q]
   (== q true))
+
+; true=Q.
 
 (run* [q]
   (== true q))
 
+; Q=false.
+
 (run* [q]
   (== q false))
+
+; Q=true, Q=false.
 
 (run* [q]
   (== q true)
   (== q false))
+
+; Q=X, X=1.
 
 (run* [q]
   (fresh [x]
     (== q x)
     (== x 1)))
 
+; Q=[X,Y].
+
 (run* [q]
   (fresh [x y]
     (== q [x y])))
+
+; no translation
 
 (run* [q]
   (let [local (+ 1 2)]
     (fresh []
       (== q local))))
+
+; [X,2]=[1,Y], Q=[X,Y].
 
 (run* [q]
   (fresh [x y]
@@ -41,6 +57,8 @@
 
 ;; -----------------------------------------------------------------------------
 ;; Under the hood
+
+;; we can get at the machinery, just closures
 
 (run* [q]
   (fn [a]
@@ -59,6 +77,8 @@
 ;; -----------------------------------------------------------------------------
 ;; Disjunction
 
+; Q=tea; Q=coffee.
+
 (run* [q]
   (conde
     [(== q 'tea)]
@@ -71,6 +91,8 @@
 
 ;; -----------------------------------------------------------------------------
 ;; Fair disjunction
+
+; no translation
 
 (defn nevero []
   (fresh []
@@ -91,17 +113,27 @@
 
 (cons 'a '(b c))
 
+; [a|[b,c]]=Q.
+
 (run* [q]
   (conso 'a '(b c) q))
+
+; [Q|[b,c]]=[a,b,c].
 
 (run* [q]
   (conso q '(b c) '(a b c)))
 
+; [a|Q]=[a,b,c].
+
 (run* [q]
   (conso 'a q '(a b c)))
 
+; [b|Q]=[a,b,c].
+
 (run* [q]
   (conso 'b q '(a b c)))
+
+; [X|[b,c]]=Q.
 
 (run* [q]
   (fresh [x]
@@ -110,8 +142,12 @@
 ;; -----------------------------------------------------------------------------
 ;; A little sugar a la PROLOG
 
+; sugar([H|T],[head-H,tail-T]).
+
 (defne sugar [l o]
   ([[h . t] [:head h :tail t]]))
+
+; sugar([cat,bird,dog],Q).
 
 (run* [q]
   (sugar '(cat bird dog) q))
@@ -182,7 +218,7 @@
   (== {:foo q} {:foo 'bar :baz 'woz}))
 
 ;; -----------------------------------------------------------------------------
-;; Extensible unification
+;; Extensible unification (see Equality for Prolog)
 
 (defprotocol IUnifyWithFoo
   (unify-with-foo [v u s]))
@@ -226,8 +262,28 @@
     (!= x y)
     (== q [x y])))
 
+(run* [q]
+  (fresh [x y]
+    (!= [x 2] [1 y])
+    (== x 1)
+    (== q [x y])))
+
+(run* [q]
+  (fresh [x y]
+    (!= [x 2] [1 y])
+    (== y 2)
+    (== q [x y])))
+
+(run* [q]
+  (fresh [x y]
+    (!= [x 2] [1 y])
+    (== x 1) (== y 2)
+    (== q [x y])))
+
 ;; -----------------------------------------------------------------------------
 ;; Projection
+
+; X=1, Y=2, Z=X+Y, Q=[X,Y,Z].
 
 (run* [q]
   (fresh [x y z]
@@ -236,6 +292,8 @@
     (== z (+ x y))
     (== q [x y z])))
 
+; X=1, Y=2, Z is X+Y, Q=[X,Y,Z].
+
 (run* [q]
   (fresh [x y z]
     (== x 1)
@@ -243,6 +301,8 @@
     (project [x y]
       (== z (+ x y)))
     (== q [x y z])))
+
+; Z is X+Y, X=1, Y=2, Q=[X,Y,Z].
 
 (run* [q]
   (fresh [x y z]
@@ -358,6 +418,26 @@
       (everyg distinctfd sqs))))
 
 (sudokufd data)
+
+(defn print-solution [vars]
+  (println)
+  (doseq [row-group (->> vars
+                        (partition 9)
+                        (partition 3)
+                        (interpose "\n\n"))]
+    (if-not (string? row-group)
+      (doseq [row (interpose "\n" row-group)]
+        (if-not (string? row)
+          (doseq [x (->> row
+                         (partition 3)
+                         (map #(interpose " " %))
+                         (interpose "  "))]
+            (print (apply str x)))
+          (print row)))
+      (print row-group)))
+  (println))
+
+(print-solution (first (sudokufd data)))
 
 (defn verify [vars]
   (let [rows (->rows vars)
