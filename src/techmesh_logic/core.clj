@@ -249,36 +249,10 @@
   (== (Foo.) (Foo.)))
 
 (run* [q]
-  (== (partial-map {:foo 'bar}) {:foo 'bar :baz 'woz}))
+  (== (partial-map {:foo 'bar}) {:foo 'bar :baz 'woz})) 
 
 (run* [q]
   (== (partial-map {:foo 'bar}) {:baz 'woz}))
-
-;; -----------------------------------------------------------------------------
-;; Disequality
-
-(run* [q]
-  (fresh [x y]
-    (!= x y)
-    (== q [x y])))
-
-(run* [q]
-  (fresh [x y]
-    (!= [x 2] [1 y])
-    (== x 1)
-    (== q [x y])))
-
-(run* [q]
-  (fresh [x y]
-    (!= [x 2] [1 y])
-    (== y 2)
-    (== q [x y])))
-
-(run* [q]
-  (fresh [x y]
-    (!= [x 2] [1 y])
-    (== x 1) (== y 2)
-    (== q [x y])))
 
 ;; -----------------------------------------------------------------------------
 ;; Projection
@@ -373,26 +347,26 @@
 (defn ->rows [xs]
   (->> xs (partition 9) (map vec) (into [])))
 
-(->rows data)
+(pp/pprint (->rows data))
 
 (defn ->cols [rows]
   (apply map vector rows))
 
-(->cols (->rows data))
+(pp/pprint (->cols (->rows data)))
 
 (defn get-square [rows x y]
   (for [x (range x (+ x 3))
         y (range y (+ y 3))]
     (get-in rows [x y])))
 
-(get-square (->rows data) 0 0)
+(pp/pprint (get-square (->rows data) 0 0))
 
 (defn ->squares [rows]
   (for [x (range 0 9 3)
         y (range 0 9 3)]
     (get-square rows x y)))
 
-(->squares (->rows data))
+(pp/pprint (->squares (->rows data)))
 
 (defn init [vars hints]
   (if (seq vars)
@@ -416,8 +390,6 @@
       (everyg distinctfd rows)
       (everyg distinctfd cols)
       (everyg distinctfd sqs))))
-
-(sudokufd data)
 
 (defn print-solution [vars]
   (println)
@@ -477,56 +449,3 @@
     (numberc x)
     (== q [x :foo])
     (== q ["foo" :foo])))
-
-;; -----------------------------------------------------------------------------
-;; Under the hood
-
-(defn -not-pathc
-  ([x path] (-not-pathc x path nil))
-  ([x path id]
-     (reify
-       clojure.lang.IFn
-       (invoke [this a]
-         (let [x (walk a x)]
-           (if (not (map? x))
-             ((remcg this) a)
-             (when (= (get-in x path ::not-found) ::not-found)
-               ((remcg this) a)))))
-       IConstraintOp
-       (rator [_] `pathc)
-       (rands [_] [x path])
-       IWithConstraintId
-       (with-id [_ id]
-         (-not-pathc x path id))
-       IRunnable
-       (runnable? [_ s]
-         (not (lvar? (walk s x))))
-       IRelevant
-       (-relevant? [_ s] true)
-       IConstraintWatchedStores
-       (watched-stores [_] #{:clojure.core.logic/subst}))))
-
-(rator (-not-pathc {:foo 'bar} '[baz woz]))
-
-(rands (-not-pathc {:foo 'bar} '[baz woz]))
-
-(runnable? (-not-pathc {:foo 'bar} '[baz woz]) empty-s)
-
-(defn not-pathc [x path]
-  (cgoal (-not-pathc x path)))
-
-(run* [q]
-  (not-pathc q [:a :b])
-  (== q 1))
-
-(run* [q]
-  (not-pathc q [:a :b])
-  (== q {:a 2}))
-
-(run* [q]
-  (not-pathc q [:a :b])
-  (== q {:a {:c 2}}))
-
-(run* [q]
-  (not-pathc q [:a :b])
-  (== q {:a {:b 1}}))
