@@ -1,8 +1,9 @@
 (ns techmesh-logic.core
   (:refer-clojure :exclude [==])
-  (:require [clojure.tools.macro :as m]
-            [clojure.pprint :as pp])
-  (:use [clojure.core.logic :as l]))
+  (:use [clojure.core.logic :as l])
+  (:require [clojure.core.logic.fd :as fd]
+            [clojure.tools.macro :as m]
+            [clojure.pprint :as pp]))
 
 ;; -----------------------------------------------------------------------------
 ;; Basics
@@ -60,19 +61,21 @@
 
 ;; we can get at the machinery, just closures
 
-(run* [q]
-  (fn [a]
-    (println a)
-    a))
-
-(run* [q]
-  (fresh [x y]
-    (== x 1)
-    (== y 2)
-    (== q [x y])
+(doall
+  (run* [q]
     (fn [a]
       (println a)
       a)))
+
+(doall
+  (run* [q]
+    (fresh [x y]
+      (== x 1)
+      (== y 2)
+      (== q [x y])
+      (fn [a]
+        (println a)
+        a))))
 
 ;; -----------------------------------------------------------------------------
 ;; Disjunction
@@ -202,9 +205,9 @@
  (run 1 [q]
    (zebrao q)))
 
-(dotimes [_ 5]
-  (time
-    (dotimes [_ 1000]
+(time
+  (dotimes [_ 1000]
+    (doall
       (run-nc 1 [q]
         (zebrao q)))))
 
@@ -216,43 +219,6 @@
 
 (run* [q]
   (== {:foo q} {:foo 'bar :baz 'woz}))
-
-;; -----------------------------------------------------------------------------
-;; Extensible unification (see Equality for Prolog)
-
-(defprotocol IUnifyWithFoo
-  (unify-with-foo [v u s]))
-
-(deftype Foo []
-  IUnifyTerms
-  (unify-terms [u v s]
-    (unify-with-foo v u s))
-  IUnifyWithFoo
-  (unify-with-foo [v u s]
-    (when (instance? Foo v)
-      s)))
-
-(extend-protocol IUnifyWithFoo
-  nil
-  (unify-with-foo [v u s] nil)
-
-  Object
-  (unify-with-foo [v u s] nil))
-
-(run* [q]
-  (== (Foo.) 1))
-
-(run* [q]
-  (== (Foo.) 'techmesh-rocks!))
-
-(run* [q]
-  (== (Foo.) (Foo.)))
-
-(run* [q]
-  (== (partial-map {:foo 'bar}) {:foo 'bar :baz 'woz})) 
-
-(run* [q]
-  (== (partial-map {:foo 'bar}) {:baz 'woz}))
 
 ;; -----------------------------------------------------------------------------
 ;; Projection
@@ -295,35 +261,35 @@
 
 (run* [q]
   (fresh [x y z]
-    (infd x y z (interval 0 9))
+    (fd/in x y z (fd/interval 0 9))
     (== x 1)
     (== y 2)
-    (+fd x y z)
+    (fd/+ x y z)
     (== q [x y z])))
 
 (run* [q]
   (fresh [x y z]
     (== q [x y z])
-    (+fd x y z)
+    (fd/+ x y z)
     (== x 1)
     (== y 2)
-    (infd x y z (interval 0 9))))
+    (fd/in x y z (fd/interval 0 9))))
 
 (run* [q]
   (fresh [x y]
     (== q [x y])
-    (infd x y (interval 0 9))
-    (+fd x y 9)
+    (fd/in x y (fd/interval 0 9))
+    (fd/+ x y 9)
     (fresh [p0 p1]
-      (infd p0 p1 (interval 0 99))
-      (*fd 2 x p0)
-      (*fd 4 y p1)
-      (+fd p0 p1 24))))
+      (fd/in p0 p1 (fd/interval 0 99))
+      (fd/* 2 x p0)
+      (fd/* 4 y p1)
+      (fd/+ p0 p1 24))))
 
 (run* [q]
   (fresh [x y]
-    (infd x y (interval 0 9))
-    (eqfd
+    (fd/in x y (fd/interval 0 9))
+    (fd/eq
       (= (+ x y) 9)
       (= (+ (* x 2) (* y 4)) 24))
     (== q [x y])))
@@ -385,11 +351,11 @@
         sqs  (->squares rows)]
     (run-nc 1 [q]
       (== q vars)
-      (everyg #(infd % (domain 1 2 3 4 5 6 7 8 9)) vars)
+      (everyg #(fd/in % (fd/domain 1 2 3 4 5 6 7 8 9)) vars)
       (init vars hints)
-      (everyg distinctfd rows)
-      (everyg distinctfd cols)
-      (everyg distinctfd sqs))))
+      (everyg fd/distinct rows)
+      (everyg fd/distinct cols)
+      (everyg fd/distinct sqs))))
 
 (defn print-solution [vars]
   (println)
@@ -424,28 +390,6 @@
 
 (verify (first (sudokufd data)))
 
-(dotimes [_ 5]
-  (time
-    (dotimes [_ 100]
-      (sudokufd data))))
-
-;; -----------------------------------------------------------------------------
-;; Extensible Constraints
-
-(defc numberc [x]
-  (number? x))
-
-(run* [q]
-  (numberc q))
-
-(run* [q]
-  (fresh [x]
-    (numberc x)
-    (== q [x :foo])
-    (== q [1 :foo])))
-
-(run* [q]
-  (fresh [x]
-    (numberc x)
-    (== q [x :foo])
-    (== q ["foo" :foo])))
+(time
+  (dotimes [_ 100]
+    (doall (sudokufd data))))
